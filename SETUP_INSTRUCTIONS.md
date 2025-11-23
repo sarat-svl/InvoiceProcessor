@@ -1,17 +1,13 @@
-# PDF Processing with Celery and RabbitMQ - Setup Instructions
+# Quick Setup Instructions
 
-## 🎉 System Status: READY TO USE!
+> 📖 **For comprehensive documentation, see [README.md](README.md)**
 
-✅ **RabbitMQ** is running on port 5672  
-✅ **Django server** is running on port 8000  
-✅ **Celery worker** is running and connected  
-✅ **Database migrations** are applied  
-✅ **All dependencies** are installed
+This is a quick reference guide for setting up the Invoice Processor. For detailed information about features, API endpoints, troubleshooting, and more, please refer to the main README.md file.
 
 ## Prerequisites
 
-1. **Python 3.8+** (already installed in your virtual environment)
-2. **RabbitMQ Server** (✅ installed and running)
+1. **Python 3.8+**
+2. **RabbitMQ Server**
 
 ## RabbitMQ Installation and Setup
 
@@ -48,33 +44,55 @@ sudo systemctl enable rabbitmq-server
 
 ## Project Setup
 
-### 1. Activate Virtual Environment
+### 1. Clone and Navigate to Project
 
 ```bash
-cd /Users/saratchandra/Desktop/stuff/HLD/InvoiceProcessor
-source venv/bin/activate
+git clone <repository-url>
+cd InvoiceProcessor
 ```
 
-### 2. Run Database Migrations
+### 2. Create and Activate Virtual Environment
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+
+# Activate virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+
+# On Windows:
+venv\Scripts\activate
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run Database Migrations
 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 3. Create Superuser (Optional)
+### 5. Create Superuser (Optional)
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### 4. Start Django Development Server
+### 6. Start Django Development Server
 
 ```bash
 python manage.py runserver
 ```
 
-### 5. Start Celery Services
+The server will be available at `http://localhost:8000`
+
+### 7. Start Celery Services
 
 #### Option A: Using the provided script
 
@@ -102,124 +120,54 @@ celery -A invoice_processor worker --loglevel=info --concurrency=4
 celery -A invoice_processor beat --loglevel=info
 ```
 
-## API Endpoints
+## Quick Start Checklist
 
-Once everything is running, you can use these API endpoints:
+- [ ] RabbitMQ installed and running
+- [ ] Virtual environment created and activated
+- [ ] Dependencies installed (`pip install -r requirements.txt`)
+- [ ] Database migrations applied (`python manage.py migrate`)
+- [ ] Django server running (`python manage.py runserver`)
+- [ ] Celery worker running (see options above)
+- [ ] Celery beat running (optional, for periodic tasks)
 
-### Upload PDF
+## Quick API Test
+
+Test the API with a sample upload:
 
 ```bash
 curl -X POST http://localhost:8000/api/pdf/upload/ \
   -F "file=@/path/to/your/document.pdf" \
-  -F "title=My Document"
+  -F "title=Test Document"
 ```
 
-### Check Document Status
+## Next Steps
 
-```bash
-curl http://localhost:8000/api/pdf/documents/{document_id}/status/
-```
-
-### Get Document Content
-
-```bash
-curl http://localhost:8000/api/pdf/documents/{document_id}/content/
-```
-
-### List All Documents
-
-```bash
-curl http://localhost:8000/api/pdf/documents/
-```
-
-### Check Task Status
-
-```bash
-curl http://localhost:8000/api/pdf/tasks/{task_id}/status/
-```
-
-### Delete Document
-
-```bash
-curl -X DELETE http://localhost:8000/api/pdf/documents/{document_id}/delete/
-```
-
-## Monitoring
-
-### RabbitMQ Management Interface
-
-- URL: http://localhost:15672
-- Default username: `guest`
-- Default password: `guest`
-
-### Celery Monitoring
-
-```bash
-# Check active tasks
-celery -A invoice_processor inspect active
-
-# Check registered tasks
-celery -A invoice_processor inspect registered
-
-# Check worker stats
-celery -A invoice_processor inspect stats
-```
-
-## File Structure
-
-```
-InvoiceProcessor/
-├── invoice_processor/
-│   ├── __init__.py
-│   ├── celery.py          # Celery configuration
-│   ├── settings.py        # Django settings with Celery config
-│   └── urls.py           # URL routing
-├── pdf_processing/
-│   ├── models.py         # PDFDocument and ProcessingTask models
-│   ├── tasks.py          # Celery tasks for PDF processing
-│   ├── views.py          # API views
-│   └── urls.py           # App URL patterns
-├── start_celery_worker.py # Worker startup script
-├── start_celery_beat.py   # Beat scheduler script
-├── run_celery.sh         # Combined startup script
-└── media/                # Uploaded PDF files (created automatically)
-```
+- 📖 See [README.md](README.md) for complete API documentation
+- 📖 See [README.md](README.md) for detailed monitoring instructions
+- 📖 See [README.md](README.md) for troubleshooting guide
 
 ## Troubleshooting
 
-### Common Issues:
+For detailed troubleshooting information, see the [Troubleshooting section in README.md](README.md#troubleshooting).
+
+### Quick Fixes:
 
 1. **RabbitMQ Connection Error**
 
-   - Ensure RabbitMQ is running: `brew services list | grep rabbitmq`
+   - Ensure RabbitMQ is running: `brew services list | grep rabbitmq` (macOS) or `sudo systemctl status rabbitmq-server` (Linux)
    - Check if port 5672 is available: `lsof -i :5672`
 
 2. **Celery Worker Not Starting**
 
+   - Verify RabbitMQ is running
    - Check Django settings: `python manage.py check`
-   - Verify Celery configuration: `python -c "from invoice_processor.celery import app; print(app.conf.broker_url)"`
 
-3. **PDF Processing Fails**
+3. **Import Errors**
 
-   - Check file permissions in media/ directory
-   - Verify PDF libraries are installed: `pip list | grep -E "(PyPDF2|pdfplumber)"`
+   - Ensure virtual environment is activated
+   - Reinstall dependencies: `pip install -r requirements.txt`
 
 4. **Database Errors**
    - Run migrations: `python manage.py migrate`
-   - Check database connection: `python manage.py dbshell`
 
-### Logs:
-
-- Django logs: Check terminal running `python manage.py runserver`
-- Celery logs: Check terminal running Celery worker
-- RabbitMQ logs: Check system logs or RabbitMQ management interface
-
-## Production Considerations
-
-1. **Use a proper database** (PostgreSQL/MySQL) instead of SQLite
-2. **Configure proper file storage** (AWS S3, etc.) for uploaded files
-3. **Set up proper logging** and monitoring
-4. **Use environment variables** for sensitive configuration
-5. **Configure proper security settings** for production
-6. **Set up Redis** as result backend for better performance
-7. **Use Docker** for containerized deployment
+For more detailed troubleshooting, monitoring, and API documentation, please refer to [README.md](README.md).
