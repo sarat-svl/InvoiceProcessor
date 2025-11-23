@@ -126,30 +126,14 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Celery Configuration
-# Option 1: Local RabbitMQ (working)
+
 CELERY_BROKER_URL = "amqp://localhost:5672"
 
-# Option 2: CloudAMQP (for future use when SSL issues are resolved)
-# CELERY_BROKER_URL = (
-#     "amqps://hyhrgycz:MWPI0I--BJe-mECoAGGpeTWDcOm0AcGH@fuji.lmq.cloudamqp.com/hyhrgycz"
-# )
 CELERY_RESULT_BACKEND = "rpc://"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
-
-# CloudAMQP SSL Configuration (commented out for local RabbitMQ)
-# CELERY_BROKER_USE_SSL = True
-# CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-# CELERY_BROKER_CONNECTION_RETRY = True
-# CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
-
-# SSL Options for CloudAMQP (commented out for local RabbitMQ)
-# import ssl
-# CELERY_BROKER_SSL_OPTIONS = {
-#     "cert_reqs": ssl.CERT_NONE,
-# }
 
 # File upload settings
 MEDIA_URL = "/media/"

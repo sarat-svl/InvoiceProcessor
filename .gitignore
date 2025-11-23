@@ -31,7 +31,6 @@ ENV/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-/media
 /staticfiles
 /static
 
@@ -54,8 +53,8 @@ celerybeat.pid
 .env.*.local
 
 # Test files (optional - uncomment if you don't want to commit test PDFs)
-# Test/
-# test_pdf_processing.py
+Test/
+test_pdf_processing.py
 
 # OS
 .DS_Store
