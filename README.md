@@ -127,11 +127,14 @@ python start_celery_beat.py
 
 ```bash
 # Terminal 1: Start Celery Worker
-celery -A invoice_processor worker --loglevel=info --concurrency=4
+# Note: Use --queues=pdf_processing to match the task routing configuration
+celery -A invoice_processor worker --loglevel=info --concurrency=4 --queues=pdf_processing
 
 # Terminal 2: Start Celery Beat
 celery -A invoice_processor beat --loglevel=info
 ```
+
+**Note**: The worker must listen to the `pdf_processing` queue to match the task routing configuration in `settings.py`. If using Option C, make sure to include `--queues=pdf_processing` in the command.
 
 ## API Endpoints
 
@@ -341,7 +344,18 @@ Celery settings are configured in `invoice_processor/settings.py`:
 ```python
 CELERY_BROKER_URL = "amqp://localhost:5672"
 CELERY_RESULT_BACKEND = "rpc://"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+# Task routing - send PDF processing tasks to pdf_processing queue
+CELERY_TASK_ROUTES = {
+    "pdf_processing.tasks.*": {"queue": "pdf_processing"},
+}
 ```
+
+**Important**: The worker listens to the `pdf_processing` queue. Tasks are automatically routed to this queue via the `CELERY_TASK_ROUTES` configuration. This ensures proper task distribution and allows for scalable, organized task processing.
 
 ## Troubleshooting
 
@@ -365,7 +379,15 @@ CELERY_RESULT_BACKEND = "rpc://"
    - Verify PDF libraries are installed: `pip list | grep -E "(PyPDF2|pdfplumber)"`
    - Check Celery worker logs for detailed error messages
 
-4. **Database Errors**
+4. **Tasks Stuck in Pending Status**
+
+   - **Queue Mismatch**: Ensure tasks are being routed to the correct queue. The worker listens to `pdf_processing` queue.
+   - Check RabbitMQ queues: `rabbitmqctl list_queues name messages`
+   - Verify task routing is configured in `settings.py`: `CELERY_TASK_ROUTES`
+   - Ensure Celery worker is listening to the correct queue: Check `start_celery_worker.py` for `--queues=pdf_processing`
+   - If tasks are stuck, restart the Celery worker after verifying configuration
+
+5. **Database Errors**
    - Run migrations: `python manage.py migrate`
    - Check database connection: `python manage.py dbshell`
    - Verify database file permissions (for SQLite)
