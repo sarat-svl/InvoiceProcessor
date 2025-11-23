@@ -1,0 +1,195 @@
+{% extends "pdf_processing/base.html" %}
+{% load static %}
+
+{% block title %}Document: {{ document.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="{% url 'home' %}" class="back-link">← Back to Documents</a>
+    <h2>📄 {{ document.title }}</h2>
+</div>
+
+<div class="document-detail">
+    <!-- Document Info Card -->
+    <div class="card">
+        <h3>📋 Document Information</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Status:</label>
+                <span class="status-badge status-{{ document.processing_status }}">{{ document.get_processing_status_display }}</span>
+            </div>
+            <div class="info-item">
+                <label>Upload Date:</label>
+                <span>{{ document.upload_date|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% if document.page_count %}
+            <div class="info-item">
+                <label>Pages:</label>
+                <span>{{ document.page_count }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <label>File Size:</label>
+                <span>{{ document.file_size|filesizeformat }}</span>
+            </div>
+            {% if document.processing_started_at %}
+            <div class="info-item">
+                <label>Processing Started:</label>
+                <span>{{ document.processing_started_at|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% endif %}
+            {% if document.processing_completed_at %}
+            <div class="info-item">
+                <label>Processing Completed:</label>
+                <span>{{ document.processing_completed_at|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% endif %}
+            {% if latest_task %}
+            <div class="info-item">
+                <label>Task Status:</label>
+                <span class="status-badge status-{{ latest_task.status|lower }}">{{ latest_task.status }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% if document.error_message %}
+        <div class="error-box">
+            <strong>Error:</strong> {{ document.error_message }}
+        </div>
+        {% endif %}
+        <div class="document-actions">
+            <button class="btn btn-danger" onclick="deleteDocument('{{ document.id }}')">Delete Document</button>
+            {% if document.processing_status == 'processing' or document.processing_status == 'pending' %}
+            <button class="btn btn-secondary" onclick="refreshStatus('{{ document.id }}')">Refresh Status</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Metadata Card -->
+    {% if document.metadata and document.metadata.items %}
+    <div class="card">
+        <h3>🏷️ Metadata</h3>
+        <div class="metadata-grid">
+            {% for key, value in document.metadata.items %}
+            {% if value %}
+            <div class="metadata-item">
+                <label>{{ key|title }}:</label>
+                <span>{{ value }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Extracted Text Card -->
+    {% if document.processing_status == 'completed' and document.extracted_text %}
+    <div class="card">
+        <div class="card-header">
+            <h3>📝 Extracted Text</h3>
+            <button class="btn btn-small btn-primary" onclick="copyToClipboard()">📋 Copy Text</button>
+        </div>
+        <div class="text-content" id="extracted-text">
+            <pre>{{ document.extracted_text }}</pre>
+        </div>
+    </div>
+    {% elif document.processing_status == 'processing' or document.processing_status == 'pending' %}
+    <div class="card">
+        <h3>Extracted Text</h3>
+        <div class="processing-indicator">
+            <div class="spinner"></div>
+            <p>Processing document... Please wait.</p>
+        </div>
+    </div>
+    {% elif document.processing_status == 'failed' %}
+    <div class="card">
+        <h3>Extracted Text</h3>
+        <div class="error-box">
+            Text extraction failed. Please check the error message above.
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const documentId = '{{ document.id }}';
+    const processingStatus = '{{ document.processing_status }}';
+    
+    // Auto-refresh if processing
+    {% if document.processing_status == 'processing' or document.processing_status == 'pending' %}
+    let refreshInterval = setInterval(() => {
+        refreshStatus(documentId);
+    }, 3000); // Refresh every 3 seconds
+    
+    // Stop refreshing when page is hidden
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            clearInterval(refreshInterval);
+        }
+    });
+    {% endif %}
+    
+    function refreshStatus(id) {
+        fetch(`/api/pdf/documents/${id}/status/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.processing_status === 'completed' || data.processing_status === 'failed') {
+                    clearInterval(refreshInterval);
+                    location.reload();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+    
+    function deleteDocument(id) {
+        if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+            return;
+        }
+        
+        fetch(`/api/pdf/documents/${id}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                window.location.href = '/';
+            } else {
+                alert('Error: ' + (data.error || 'Failed to delete document'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the document');
+        });
+    }
+    
+    function copyToClipboard() {
+        const text = document.getElementById('extracted-text').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Text copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
+

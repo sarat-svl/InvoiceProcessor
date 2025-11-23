@@ -20,7 +20,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/pdf/", include("pdf_processing.urls")),
+    path("", include("pdf_processing.urls")),  # UI and API routes
 ]
 
 # Serve media files during development

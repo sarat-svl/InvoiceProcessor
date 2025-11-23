@@ -226,3 +226,29 @@ def task_status(request, task_id):
             {'error': f'Failed to get task status: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+# Template views for UI
+def home(request):
+    """
+    Home page view - displays upload form and document list
+    """
+    documents = PDFDocument.objects.all().order_by('-upload_date')[:50]  # Latest 50 documents
+    context = {
+        'documents': documents,
+        'max_upload_size_mb': settings.MAX_UPLOAD_SIZE / (1024 * 1024)
+    }
+    return render(request, 'pdf_processing/home.html', context)
+
+
+def document_detail(request, document_id):
+    """
+    Document detail page view
+    """
+    document = get_object_or_404(PDFDocument, id=document_id)
+    latest_task = document.tasks.order_by('-created_at').first()
+    context = {
+        'document': document,
+        'latest_task': latest_task,
+    }
+    return render(request, 'pdf_processing/document_detail.html', context)
